@@ -448,7 +448,11 @@ function print_preRegistration()
     }
 
     foreach ($upcoming_events as $event) {
-        echo '<tr><td><a href="eventreport.php?event='.rawurlencode($event->name)."\">{$event->name}</a></td>";
+        $targetUrl = 'eventreport';
+        if ($event->authCheck($player->name)) {
+            $targetUrl = 'event';
+        }
+        echo '<tr><td><a href="'.$targetUrl.'.php?event='.rawurlencode($event->name)."\">{$event->name}</a></td>";
         if (time() >= strtotime($event->start)) {
             echo '<td class="eventtime" start="'.$event->start.'"> Starting soon</td>';
         } else {
@@ -497,7 +501,6 @@ function print_ActiveEvents()
     }
 
     $Leagues = [];
-    $numberOfLeagues = 0;
     foreach ($events as $event) {
         if (Standings::playerActive($event->name, $player->name) == 0 && $event->private) {
             continue;
@@ -506,7 +509,7 @@ function print_ActiveEvents()
         if ($event->authCheck($player->name)) {
             $targetUrl = 'event';
         }
-        echo "<tr><td><a href=\"{$targetUrl}.php?event={$event->name}\">{$event->name}</a>";
+        echo "<tr><td><a href=\"{$targetUrl}.php?event=".rawurlencode($event->name)."\">{$event->name}</a>";
         $series = new Series($event->series);
         if ($series->mtgo_room) {
             echo " <pre style=\"cursor:help;\" title=\"To join a Chat room, use the Chat menu, or type /join #$series->mtgo_room into your game chat.\" >MTGO room #$series->mtgo_room</pre>";
@@ -517,11 +520,9 @@ function print_ActiveEvents()
             if ($event->current_round > $event->mainrounds) {
                 $structure = $event->finalstruct;
                 $subevent_id = $event->finalid;
-                $round = 'final';
             } else {
                 $structure = $event->mainstruct;
                 $subevent_id = $event->mainid;
-                $round = 'main';
             }
             if ($structure == 'League') {
                 $count = $event->getPlayerLeagueMatchCount($player->name) + 1;
@@ -608,7 +609,7 @@ function print_allDeckTable()
         if ($event->authCheck($player->name)) {
             $targetUrl = 'event';
         }
-        echo "<td align=\"right\"><a href=\"{$targetUrl}.php?event={$event->name}\">{$event->name}</a></td>\n";
+        echo "<td align=\"right\"><a href=\"{$targetUrl}.php?event=".rawurlencode($event->name)."\">{$event->name}</a></td>\n";
         echo "</td></tr>\n";
     }
     echo "</table>\n";
