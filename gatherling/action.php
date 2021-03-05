@@ -40,7 +40,7 @@ if (!is_null($player)) {
 
     $active_events = Event::getActiveEvents();
     foreach ($active_events as $event) {
-        if ($event->authCheck($player->name) && !$event->private) {
+        if ($event->authCheck($player->name) && !$event->private && !$event->isLeague()) {
             $message = "Your event <a href=\"event.php?event={$event->name}\">{$event->name}</a> is currently active.";
             // if ($event->current_round > ($event->mainrounds)) {
             //     $subevent_id = $event->finalid;
@@ -55,7 +55,11 @@ if (!is_null($player)) {
     $matches = $player->getCurrentMatches();
     foreach ($matches as $match) {
         $event = new Event($match->getEventNamebyMatchid());
-        if ($event->isLeague()) {
+        if ($event->client == 1 && empty($player->mtgo_username)) {
+            $message = '<a href="player.php?mode=edit_accounts">Set your MTGO username so that your opponent can find you.</a>.';
+        } elseif ($event->client == 2 && empty($player->mtga_username)) {
+            $message = '<a href="player.php?mode=edit_accounts">Set your MTGA username so that your opponent can Direct Challenge you.</a>.';
+        } elseif ($event->isLeague()) {
             // Do nothing
         } elseif ($match->result != 'BYE' && $match->verification == 'unverified') {
             $opp = $match->playera;
@@ -74,9 +78,9 @@ if (!is_null($player)) {
                 $message = "You have an unreported match in $event->name vs. ";
                 if ($event->decklistsVisible()) {
                     $opp_entry = Entry::findByEventAndPlayer($event->id, $oppplayer->name);
-                    $message = $message.$oppplayer->name.' ('.$opp_entry->deck->linkTo().').';
+                    $message = $message.$oppplayer->linkTo($event->client).' ('.$opp_entry->deck->linkTo().').';
                 } else {
-                    $message = $message.$oppplayer->linkTo().'.';
+                    $message = $message.$oppplayer->linkTo($event->client).'.';
                 }
                 if ($match->player_reportable_check() == true) {
                     $message = $message.'  <a href="report.php?mode=submit_result&match_id='.$match->id.'&player='.$player_number.'">(Report Result)</a>';

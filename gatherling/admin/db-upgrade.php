@@ -76,7 +76,7 @@ function redirect_deck_update($latest_id = 0)
 }
 
 if (isset($_GET['deckupdate'])) {
-    $deckquery = do_query('SELECT id FROM decks WHERE id > '.$_GET['deckupdate']);
+    $deckquery = do_query('SELECT id FROM decks WHERE id > '.intval($_GET['deckupdate']));
     $timestart = time();
     while ($deckid = $deckquery->fetch_array()) {
         flush();
@@ -719,6 +719,49 @@ upgrade_db(40, 'We need longer card names.', function () {
     // We probably won't go past OMRSTPLRLCNSWMTCTHTALCNEE any time soon, but let's give it an additional 20 characters just in case ;P
 });
 
+upgrade_db(41, 'Arena Support?', function () {
+    // We can't ALTER `events` on prod, because the database contains illegal rows.  Fix them first.
+    do_query("SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'NO_ZERO_DATE',''));");
+    do_query("SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'NO_ZERO_IN_DATE',''));");
+    do_query("UPDATE `events`
+    SET START='2011-01-01 00:00:00'
+    WHERE `start` = '0000-00-00 00:00:00';");
+    do_query("ALTER TABLE `players`
+    ADD COLUMN `mtga_username` VARCHAR(32) COLLATE 'utf8mb4_general_ci' NULL;");
+    do_query("CREATE TABLE `client` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `name` VARCHAR(50) NOT NULL,
+        PRIMARY KEY (`id`)
+    )
+    COLLATE='latin1_swedish_ci'
+    ;");
+    do_query("INSERT INTO `client` (`id`, `name`) VALUES
+    (1,	'mtgo'),
+    (2,	'arena'),
+    (3,	'paper');");
+    do_query("ALTER TABLE `events`
+    ADD `client` int(10) unsigned NOT NULL DEFAULT '1',
+    ADD FOREIGN KEY (`client`) REFERENCES `client` (`id`);");
+});
+upgrade_db(42, 'Arena Support pt 2', function () {
+    do_query("ALTER TABLE `players`
+    ADD COLUMN `mtgo_username` VARCHAR(40) COLLATE 'utf8mb4_general_ci' NULL;");
+    do_query('ALTER TABLE `players`
+	ADD UNIQUE INDEX `mtga_username` (`mtga_username`),
+    ADD UNIQUE INDEX `mtgo_username` (`mtgo_username`);');
+    do_query('ALTER TABLE `series`
+	ADD COLUMN `discord_guild_id` BIGINT NULL DEFAULT NULL AFTER `mtgo_room`,
+	ADD COLUMN `discord_channel_name` VARCHAR(50) NULL DEFAULT NULL AFTER `discord_guild_id`,
+	ADD COLUMN `discord_guild_name` VARCHAR(50) NULL DEFAULT NULL AFTER `discord_channel_name`,
+    ADD COLUMN `discord_guild_invite` VARCHAR(50) NULL DEFAULT NULL AFTER `discord_guild_name`;');
+    do_query("UPDATE `players` SET `mtgo_username` = `name` WHERE `mtgo_confirmed` = '1' AND `mtgo_username` IS NULL AND `mtgo_challenge` IS NOT NULL;");
+});
+upgrade_db(43, 'MiniLeague', function () {
+    do_query("ALTER TABLE `subevents`
+	CHANGE COLUMN `type` `type` ENUM('Swiss','Swiss (Blossom)','Single Elimination','League','Round Robin', 'League Match') NOT NULL COLLATE 'latin1_swedish_ci' AFTER `timing`;");
+    do_query('ALTER TABLE `series`
+        ADD COLUMN `discord_require_membership` BIGINT NULL DEFAULT NULL;');
+});
 $db->autocommit(true);
 
 info('DB is up to date!');

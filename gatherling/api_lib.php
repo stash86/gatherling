@@ -109,8 +109,10 @@ function repr_json_event($event)
 
     $json['finalists'] = $event->getFinalists();
     $json['standings'] = [];
-    foreach (Standings::getEventStandings($event->name, $event->active) as $s) {
+    $json['players'] = [];
+    foreach (Standings::getEventStandings($event->name, 0) as $s) {
         $json['standings'][] = populate([], $s, ['player', 'active', 'score', 'matches_played', 'matches_won', 'draws', 'games_won', 'games_played', 'byes', 'OP_Match', 'PL_Game', 'OP_Game', 'seed']);
+        $json['players'][$s->player] = repr_json_player(new Player($s->player));
     }
 
     return $json;
@@ -122,7 +124,7 @@ function repr_json_deck($deck)
     $json['id'] = $deck->id;
     if ($deck->id != 0) {
         $json['found'] = 1;
-        $json = populate($json, $deck, ['name', 'archetype', 'notes']);
+        $json = populate($json, $deck, ['playername', 'name', 'archetype', 'notes']);
         $json['maindeck'] = $deck->maindeck_cards;
         $json['sideboard'] = $deck->sideboard_cards;
     } else {
@@ -141,7 +143,7 @@ function repr_json_series($series)
 
 function repr_json_player($player)
 {
-    $json = populate([], $player, ['name', 'verified', 'discord_id']);
+    $json = populate([], $player, ['name', 'verified', 'discord_id', 'discord_handle', 'mtga_username', 'mtgo_username']);
 
     return $json;
 }
@@ -258,7 +260,8 @@ function create_event()
         arg('mainrounds', ''),
         arg('mainstruct', ''),
         arg('finalrounds', ''),
-        arg('finalstruct', '')
+        arg('finalstruct', ''),
+        arg('client', 1)
     );
 
     $result = [];

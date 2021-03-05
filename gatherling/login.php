@@ -28,7 +28,7 @@ print_header('Login');
         <form action="login.php" method="post">
             <table class="form" align="center" style="border-width: 0px" cellpadding="3">
                 <tr>
-                    <th>MTGO Username</th>
+                    <th>Gatherling Username</th>
                     <td><input id="username" class="inputbox" type="text" name="username" value="<?=$username?>" tabindex="1"></td>
                 </tr>
                 <tr>
@@ -49,7 +49,7 @@ print_header('Login');
                         <input class="inputbutton" type="submit" name="mode" value="Log In">
                         <?php
                         if (!isset($_SESSION['DISCORD_ID'])) {
-                            echo '<input class="inputbutton discordlogin fa-discord" type="submit" name="mode" value="Log In with discord" />';
+                            echo '<input class="inputbutton discordlogin fa-discord" type="submit" name="mode" value="Log In with Discord" />';
                         } ?>
                         <br />
                         Please <a href="register.php">Click Here</a> if you need to register.<br />
@@ -78,7 +78,7 @@ function printIPAddressChanged()
 
 function testLogin()
 {
-    if (isset($_REQUEST['mode']) && $_REQUEST['mode'] == 'Log In with discord') {
+    if (isset($_REQUEST['mode']) && $_REQUEST['mode'] == 'Log In with Discord') {
         redirect('auth.php');
     }
     $success = 0;

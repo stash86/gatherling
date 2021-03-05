@@ -23,7 +23,7 @@ function info($text, $newline = true)
 if (PHP_SAPI == 'cli') {
     if (isset($argv[1])) {
         if (strlen($argv[1]) < 4) {
-            $file = file_get_contents("https://mtgjson.com/json/{$argv[1]}.json");
+            $file = file_get_contents("https://mtgjson.com/api/v5/{$argv[1]}.json");
         } else {
             $file = file_get_contents($argv[1]);
         }
@@ -42,7 +42,7 @@ if (PHP_SAPI == 'cli') {
             $_REQUEST['cardsetcode'] = 'CON_';
         }
 
-        $file = file_get_contents("https://mtgjson.com/json/{$_REQUEST['cardsetcode']}.json");
+        $file = file_get_contents("https://mtgjson.com/api/v5/{$_REQUEST['cardsetcode']}.json");
     } elseif (isset($_FILES['cardsetfile'])) {
         $file = file_get_contents($_FILES['cardsetfile']['tmp_name']);
     } else {
@@ -55,7 +55,7 @@ if ($file == false) {
 }
 
 $data = json_decode($file);
-
+$data = $data->data;
 $set = $data->name;
 if ($set == 'Time Spiral "Timeshifted"') {
     // Terrible hack, but needed.
@@ -147,9 +147,9 @@ Format::constructTribes($set);
 
 function insertCard($card, $set, $rarity, $stmt)
 {
-    $typeline = implode($card->types, ' ');
+    $typeline = implode(' ', $card->types);
     if (isset($card->subtypes) && count($card->subtypes) > 0) {
-        $typeline = $typeline.' - '.implode($card->subtypes, ' ');
+        $typeline = $typeline.' - '.implode(' ', $card->subtypes);
     }
     $name = $card->name;
     if ($card->layout == 'split' || $card->layout == 'aftermath') {
@@ -200,7 +200,7 @@ function insertCard($card, $set, $rarity, $stmt)
         $changeling = 1;
     }
 
-    $online = isset($card->isMtgo);
+    $online = in_array('mtgo', $card->availability);
 
     $empty_string = '';
     $zero = 0;

@@ -142,9 +142,11 @@ class Standings
                 $color_code = ' style="color:green" ';
             }
             $match_score = $player_standing->score;
+            $sp = new Player($player_standing->player);
+            $name = $sp->gameName($event->client);
             echo "<tr>
                   <td{$color_code}>{$rank}</td>
-                  <td{$color_code}>{$player_standing->player}</td>
+                  <td{$color_code}>{$name}</td>
                   <td{$color_code}>{$match_score}</td>
                   <td{$color_code}>{$player_standing->OP_Match}</td>
                   <td{$color_code}>{$player_standing->PL_Game}</td>
@@ -261,10 +263,15 @@ class Standings
         return $opponents;
     }
 
+    /**
+     * @param int $subevent
+     * @param int $round
+     *
+     * @return void|array
+     */
     public function League_getAvailable_Opponents($subevent, $round)
     {
         $opponentsAlreadyFaced = [];
-        $playernames = [];
         $allPlayers = [];
         $opponent_names = [];
 
@@ -291,7 +298,10 @@ class Standings
             }
             $stmt->close();
         }
-
+        $structure = Database::single_result_single_param('SELECT `type` FROM subevents WHERE id = ?', 'd', $subevent);
+        if ($structure == 'League Match' && count($opponentsAlreadyFaced) >= 1) {
+            return [];
+        }
         if (count($opponentsAlreadyFaced) >= 5) {
             return [];
         }

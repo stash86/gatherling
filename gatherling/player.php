@@ -23,9 +23,8 @@ if (isset($_POST['action'])) {
         $success = false;
         if ($_POST['newPassword2'] == $_POST['newPassword']) {
             if (strlen($_POST['newPassword']) >= 8) {
-                $authenticated = Player::checkPassword($_POST['username'], $_POST['oldPassword']);
+                $authenticated = Player::checkPassword($player->name, $_POST['oldPassword']);
                 if ($authenticated) {
-                    $player = new Player($_POST['username']);
                     $player->setPassword($_POST['newPassword']);
                     $result = 'Password changed.';
                     $success = true;
@@ -41,7 +40,6 @@ if (isset($_POST['action'])) {
     } elseif ($_POST['action'] == 'editEmail') {
         $success = false;
         if ($_POST['newEmail'] == $_POST['newEmail2']) {
-            $player = new Player($_POST['username']);
             $player->emailAddress = ($_POST['newEmail']);
             $player->emailPrivacy = ($_POST['emailstatus']);
             $result = 'Email changed.';
@@ -50,8 +48,18 @@ if (isset($_POST['action'])) {
         } else {
             $result = 'Email *NOT* Changed, your new emails did not match!';
         }
+    } elseif ($_POST['action'] == 'editAccounts') {
+        $success = false;
+
+        $player->mtgo_username = empty($_POST['mtgo_username']) ? null : $_POST['mtgo_username'];
+        if (!preg_match('/^.{3,24}#\d{5}$/', $_POST['mtga_username'])) {
+            $_POST['mtga_username'] = null;
+        }
+        $player->mtga_username = empty($_POST['mtga_username']) ? null : $_POST['mtga_username'];
+        $player->save();
+        $result = 'Accounts updated.';
+        $success = true;
     } elseif ($_POST['action'] == 'changeTimeZone') {
-        $player = new Player($_POST['username']);
         $player->timezone = ($_POST['timezone']);
         $result = 'Time Zone Changed.';
         $player->save();
@@ -116,6 +124,10 @@ case 'edit_email':
 print_editEmailForm($player, $result);
 break;
 
+case 'edit_accounts':
+print_editAccountsForm($player, $result);
+break;
+
 case 'change_timezone':
 print_editTimeZoneForm($player, $result);
 break;
@@ -156,7 +168,6 @@ function print_changePassForm($player, $result)
     echo "<form action=\"player.php\" method=\"post\" onsubmit=\"return validate_pw()\">\n";
     echo "<input name=\"action\" type=\"hidden\" value=\"changePassword\" />\n";
     echo "<input name=\"mode\" type=\"hidden\" value=\"changepass\" />\n";
-    echo "<input name=\"username\" type=\"hidden\" value=\"{$player->name}\" />\n";
     echo '<table class="form">';
     echo "<tr><th>Current Password</th>\n";
     echo "<td><input class=\"inputbox\" name=\"oldPassword\" type=\"password\" /></td></tr>\n";
@@ -180,7 +191,6 @@ function print_editEmailForm($player, $result)
         echo "<form action=\"player.php\" method=\"post\">\n";
         echo "<input name=\"action\" type=\"hidden\" value=\"editEmail\" />\n";
         echo "<input name=\"mode\" type=\"hidden\" value=\"edit_email\" />\n";
-        echo "<input name=\"username\" type=\"hidden\" value=\"{$player->name}\" />\n";
         echo '<table class="form">';
         echo "<tr><th>New Email</th>\n";
         echo "<td><input class=\"inputbox\" name=\"newEmail\" type=\"email\" /></td></tr>\n";
@@ -202,7 +212,6 @@ function print_editEmailForm($player, $result)
         echo "<form action=\"player.php\" method=\"post\">\n";
         echo "<input name=\"action\" type=\"hidden\" value=\"editEmail\" />\n";
         echo "<input name=\"mode\" type=\"hidden\" value=\"edit_email\" />\n";
-        echo "<input name=\"username\" type=\"hidden\" value=\"{$player->name}\" />\n";
         echo '<table class="form">';
         echo "<tr><th>Existing Email: </th>\n";
         echo "<td>{$player->emailAddress}</td></tr>";
@@ -220,6 +229,22 @@ function print_editEmailForm($player, $result)
         echo "</form>\n";
         echo "<div class=\"clear\"></div>\n";
     }
+}
+
+function print_editAccountsForm($player, $result)
+{
+    echo "<center><h3>Set your accounts</h3></center>\n";
+    echo "<center style=\"color: red; font-weight: bold;\">{$result}</center>\n";
+    echo "<form action=\"player.php\" method=\"post\">\n";
+    echo "<input name=\"action\" type=\"hidden\" value=\"editAccounts\" />\n";
+    echo '<table class="form">';
+    print_text_input('Magic Online', 'mtgo_username', $player->mtgo_username);
+    print_text_input('Magic Arena', 'mtga_username', $player->mtga_username, 0, "Don't forget the 5-digit number!");
+    echo "<tr><td colspan=\"2\" class=\"buttons\">\n";
+    echo "<input class=\"inputbutton\" name=\"submit\" type=\"submit\" value=\"Update Accounts\" />\n";
+    echo "</td></tr></table>\n";
+    echo "</form>\n";
+    echo "<div class=\"clear\"></div>\n";
 }
 
 function print_editTimeZoneForm($player, $result)
@@ -310,6 +335,7 @@ function print_mainPlayerCP($player, $result)
     if ($result) {
         echo "<center style=\"color: red; font-weight: bold;\">{$result}</center>\n";
     }
+    /// Events
     echo '<div id="future" class="tabcontent">';
     echo "<div class=\"alpha grid_5\">\n";
     echo "<div id=\"gatherling_lefthalf\">\n";
@@ -322,6 +348,7 @@ function print_mainPlayerCP($player, $result)
     echo "</div></div>\n";
     echo '</div>';
 
+    /// History
     echo '<div id="past" class="tabcontent">';
     echo "<div class=\"alpha grid_5\">\n";
     echo "<div id=\"gatherling_lefthalf\">\n";
@@ -333,6 +360,7 @@ function print_mainPlayerCP($player, $result)
     echo "</div></div>\n";
     echo '</div>';
 
+    /// Statistics
     echo '<div id="statistics" class="tabcontent">';
     echo "<div class=\"alpha grid_5\">\n";
     echo "<div id=\"gatherling_lefthalf\">\n";
@@ -344,9 +372,10 @@ function print_mainPlayerCP($player, $result)
     echo "</div></div>\n";
     echo '</div>';
 
+    /// Settings
     echo '<div id="settings" class="tabcontent">';
-    echo "<div class=\"alpha grid_10\">\n";
-    echo "<div id=\"gatherling_full\">\n";
+    echo "<div class=\"alpha grid_5\">\n";
+    echo "<div id=\"gatherling_lefthalf\">\n";
     echo "<b>ACTIONS</b><br />\n";
     echo "<ul>\n";
     echo "<li><a href=\"player.php?mode=changepass\">Change your password</a></li>\n";
@@ -356,21 +385,40 @@ function print_mainPlayerCP($player, $result)
         echo "<li><a href=\"player.php?mode=edit_email\">Change Email Address: {$player->emailAddress}</a></li>\n";
     }
     echo "<li><a href=\"player.php?mode=change_timezone\">Change Your Time Zone</a></li>\n";
+    echo "</div></div>\n";
+    //
+    echo "<div class=\"omega grid_5\">\n";
+    echo "<div id=\"gatherling_righthalf\">\n";
+    echo "<b>CONNECTIONS</b><br />\n";
+    if (empty($player->mtgo_username)) {
+        echo "<li><a href=\"player.php?mode=edit_accounts\">Add a Magic Online account</a></li>\n";
+    } else {
+        echo '<li><span style="color: green; font-weight: bold;"><i class="ss ss-pmodo"></i> '."$player->mtgo_username</span> (<a href=\"player.php?mode=edit_accounts\">edit</a>)</li>\n";
+    }
+
+    if (empty($player->mtga_username)) {
+        echo "<li><a href=\"player.php?mode=edit_accounts\">Add an Arena account</a></li>\n";
+    } else {
+        echo '<li><span style="color: green; font-weight: bold;"><i class="ss ss-parl3"></i> '."$player->mtga_username</span> (<a href=\"player.php?mode=edit_accounts\">edit</a>)</li>\n";
+    }
+    // if ($player->verified == 0) {
+    //     echo "<li><a href=\"player.php?mode=verifymtgo\">Verify your <i class=\"ss ss-pmodo\"></i> MTGO account</a></li>\n";
+    // } else {
+    //     echo '<li><span style="color: green; font-weight: bold;">'.image_tag('verified.png').'<i class="ss ss-pmodo"></i> '."MTGO Verified</span></li>\n";
+    // }
+
     if (isset($_SESSION['DISCORD_ID']) && empty($player->discord_id)) {
         echo "<li><a href=\"auth.php\">Link your account to <i class=\"fab fa-discord\"></i> {$_SESSION['DISCORD_NAME']}</a></li>\n";
     } elseif (empty($player->discord_id)) {
         echo "<li><a href=\"auth.php\">Link your account to <i class=\"fab fa-discord\"></i> Discord</a></li>\n";
-    }
-    if ($player->verified == 0) {
-        echo "<li><a href=\"player.php?mode=verifymtgo\">Verify your MTGO account</a></li>\n";
     } else {
-        echo '<li><span style="color: green; font-weight: bold;">'.image_tag('verified.png')."Account Verified</span></li>\n";
+        echo "<li><span style=\"color: green; font-weight: bold;\"><i class=\"fab fa-discord\"></i> $player->discord_handle</span> (<a href=\"auth.php\">Link new account</a>)</li>\n";
     }
     echo "</ul>\n";
     echo "</div></div>\n";
     echo '</div>';
     echo "<div class=\"clear\"></div>\n";
-    echo '<script src="tab_view.js"></script>';
+    echo '<script src="tab_view.js" async></script>';
 }
 
 function print_allContainer()
@@ -392,7 +440,7 @@ function print_recentDeckTable()
 {
     global $player;
 
-    echo "<table width-'100%'>\n";
+    echo "<table width='100%'>\n";
     echo "<tr><td colspan=3><b>RECENT DECKS</td>\n";
     echo '<td colspan=2 align="right">';
     echo "<a href=\"player.php?mode=alldecks\">(see all)</a></td>\n";
@@ -416,7 +464,7 @@ function print_recentDeckTable()
                 $targetUrl = 'event';
             }
             echo "<td style=\"white-space: nowrap;\"><a href=\"${targetUrl}.php?event={$deck->eventname}\">{$deck->eventname}</a></a></td>\n";
-            echo '<td  width="99%"" align="right">'.$deck->recordString()."</td></tr>\n";
+            echo '<td width="99%" align="right">'.$deck->recordString()."</td></tr>\n";
         }
     }
     echo "</table>\n";
@@ -447,7 +495,15 @@ function print_preRegistration()
         echo '<tr><td colspan="3"> You haven\'t registered for any events </td> </tr>';
     }
 
+    $arena = false;
+    $mtgo = false;
     foreach ($upcoming_events as $event) {
+        if ($event->client == 1) {
+            $mtgo = true;
+        } elseif ($event->client == 2) {
+            $arena = true;
+        }
+
         $targetUrl = 'eventreport';
         if ($event->authCheck($player->name)) {
             $targetUrl = 'event';
@@ -468,6 +524,13 @@ function print_preRegistration()
         echo '<td><a href="prereg.php?action=unreg&event='.rawurlencode($event->name).'">Unreg</a></td>';
         echo '</tr>';
     }
+    if ($mtgo && empty($player->mtgo_username)) {
+        echo '<tr>Please <a href="player.php?mode=edit_accounts">set your MTGO username</a>.</tr>';
+    }
+    if ($arena && empty($player->mtga_username)) {
+        echo '<tr>Please <a href="player.php?mode=edit_accounts">set your MTGA username</a>.</tr>';
+    }
+
     echo '</table>';
     echo '<table class="gatherling_full"><tr><td colspan="3"><b>PREREGISTER FOR EVENTS</b></td></tr>';
     if (count($available_events) == 0) {
@@ -511,8 +574,10 @@ function print_ActiveEvents()
         }
         echo "<tr><td><a href=\"{$targetUrl}.php?event=".rawurlencode($event->name)."\">{$event->name}</a>";
         $series = new Series($event->series);
-        if ($series->mtgo_room) {
-            echo " <pre style=\"cursor:help;\" title=\"To join a Chat room, use the Chat menu, or type /join #$series->mtgo_room into your game chat.\" >MTGO room #$series->mtgo_room</pre>";
+        if ($series->discord_guild_name && $series->discord_channel_name) {
+            echo " <pre style=\"cursor:help;\" title=\"The Tournament Organizer prefers that your join their Discord server.\" ><i class=\"fab fa-discord\"></i> #$series->discord_channel_name in $series->discord_guild_name</pre>";
+        } elseif ($series->mtgo_room) {
+            echo " <pre style=\"cursor:help;\" title=\"To join a Chat room, use the Chat menu, or type /join #$series->mtgo_room into your game chat.\" ><i class=\"ss ss-pmodo\"></i> MTGO room #$series->mtgo_room</pre>";
         }
         echo '</td>';
         echo "<td><a href=\"player.php?mode=standings&event={$event->name}\">Current Standings</a></td>";
@@ -528,6 +593,12 @@ function print_ActiveEvents()
                 $count = $event->getPlayerLeagueMatchCount($player->name) + 1;
                 if ($count < 6) {
                     $Leagues[] = "<tr><td>{$event->name} Match: {$count}</td><td><a href=\"report.php?mode=submit_league_result&event={$event->name}&round={$event->current_round}&subevent={$subevent_id}\">Report League Game</a></td></tr>";
+                }
+            }
+            if ($structure == 'League Match') {
+                $count = $event->getPlayerLeagueMatchCount($player->name);
+                if ($count < 1) {
+                    $Leagues[] = "<tr><td>{$event->name} Match: {$event->current_round}</td><td><a href=\"report.php?mode=submit_league_result&event={$event->name}&round={$event->current_round}&subevent={$subevent_id}\">Report League Game</a></td></tr>";
                 }
             }
             if ($structure !== 'Single Elimination') {
@@ -679,7 +750,7 @@ function print_currentMatchTable($Leagues)
             echo $event->name.' Round: '.$event->current_round.' ';
             echo '</td>';
             echo "<td>vs.</td>\n";
-            echo '<td>'.$oppplayer->linkTo().'</td><td>';
+            echo '<td>'.$oppplayer->linkTo($event->client).'</td><td>';
             if ($match->verification == 'unverified') {
                 if ($player_number == 'b' and ($match->playerb_wins + $match->playerb_losses) > 0) {
                     echo '(Report Submitted)';

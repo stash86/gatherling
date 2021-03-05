@@ -512,6 +512,15 @@ function eventForm($event = null, $forcenew = false)
             $day = $datearr[3];
             $hour = $datearr[4];
             $minutes = $datearr[5];
+        } else {
+            $year = strftime('Y', time());
+            $month = strftime('B', time());
+            $day = strftime('Y', time());
+            $hour = strftime('H', time());
+            $minutes = strftime('M', time());
+        }
+
+        if ($edit) {
             echo '<tr><th>Currently Editing</th>';
             echo "<td><i>{$event->name}</i>";
             echo "<input type=\"hidden\" name=\"name\" value=\"{$event->name}\">";
@@ -538,12 +547,8 @@ function eventForm($event = null, $forcenew = false)
             echo "<input class=\"inputbox\" type=\"text\" name=\"name\" value=\"{$event->name}\" ";
             echo 'size="40">';
             echo '</td></tr>';
-            $year = strftime('Y', time());
-            $month = strftime('B', time());
-            $day = strftime('Y', time());
-            $hour = strftime('H', time());
-            $minutes = strftime('M', time());
         }
+
         echo '<tr><th>Date & Time</th><td>';
         numDropMenu('year', '- Year -', date('Y') + 1, $year, 2011);
         monthDropMenu($month);
@@ -573,9 +578,9 @@ function eventForm($event = null, $forcenew = false)
         echo '&nbsp;/&nbsp;';
         stringField('cohost', $event->cohost, 20);
         echo '</td></tr>';
-        print_text_input('Event Thread URL', 'threadurl', $event->threadurl, 60);
-        print_text_input('Metagame URL', 'metaurl', $event->metaurl, 60);
-        print_text_input('Report URL', 'reporturl', $event->reporturl, 60);
+        print_text_input('Event Thread URL', 'threadurl', $event->threadurl, 60, null, null, true);
+        print_text_input('Metagame URL', 'metaurl', $event->metaurl, 60, null, null, true);
+        print_text_input('Report URL', 'reporturl', $event->reporturl, 60, null, null, true);
         echo '<tr><th>Main Event Structure</th><td>';
         numDropMenu('mainrounds', '- No. of Rounds -', 10, $event->mainrounds, 1);
         echo ' rounds of ';
@@ -586,17 +591,18 @@ function eventForm($event = null, $forcenew = false)
         echo ' rounds of ';
         structDropMenu('finalstruct', $event->finalstruct);
         echo '</td></tr>';
-        print_checkbox_input('Allow Pre-Registration', 'prereg_allowed', $event->prereg_allowed);
+        print_checkbox_input('Allow Pre-Registration', 'prereg_allowed', $event->prereg_allowed, null, true);
         print_text_input('Late Entry Limit', 'late_entry_limit', $event->late_entry_limit, 4, 'The event host may still add players after this round.');
 
         print_checkbox_input('Allow Players to Report Results', 'player_reportable', $event->player_reportable);
 
-        print_text_input('Player initiatied registration cap', 'prereg_cap', $event->prereg_cap, 4, 'The event host may still add players beyond this limit. 0 is disabled.');
+        print_text_input('Player initiatied registration cap', 'prereg_cap', $event->prereg_cap, 4, 'The event host may still add players beyond this limit. 0 is disabled.', null, true);
 
         print_checkbox_input('Deck List Privacy', 'private_decks', $event->private_decks);
         print_checkbox_input('Finals List Privacy', 'private_finals', $event->private_finals);
         print_checkbox_input('Allow Player Reported Draws', 'player_reported_draws', $event->player_reported_draws, 'This allows players to report a draw result for matches.');
         print_checkbox_input('Private Event', 'private', $event->private, 'This event is invisible to non-participants');
+        clientDropMenu('client', $event->client);
 
         if ($edit == 0) {
             echo '<tr><td>&nbsp;</td></tr>';
@@ -718,7 +724,7 @@ function playerList($event)
         echo '<tr><td align="center" colspan="5"><i>';
         echo 'No players are currently registered for this event.</i></td></tr>';
     }
-
+    $deckless = 'Still waiting on decklists from ';
     foreach ($entries as $entry) {
         echo "<tr id=\"entry_row_{$entry->player->name}\">";
         // Show drop box if event is active.
@@ -747,6 +753,15 @@ function playerList($event)
         if ($entry->deck) {
             $decklink = $entry->deck->linkTo();
         } else {
+            if (!empty($entry->player->discord_handle)) {
+                $deckless .= "@{$entry->player->discord_handle}, ";
+            } elseif ($event->client == 1 && !empty($entry->player->mtgo_username)) {
+                $deckless .= "{$entry->player->mtgo_username}, ";
+            } elseif ($event->client == 2 && !empty($entry->player->mtga_username)) {
+                $deckless .= "{$entry->player->mtgo_username}, ";
+            } else {
+                $deckless .= "{$entry->player->name}, ";
+            }
             $decklink = $entry->createDeckLink();
         }
         $rstar = '<font color="red">*</font>';
@@ -821,6 +836,8 @@ function playerList($event)
     echo '<table><th>Round Actions</th><tr>';
     if ($event->active == 0 && $event->finalized == 0) {
         echo '<td><input id="start_event" class="inputbutton" type="submit" name="mode" value="Start Event" /></td></tr>';
+        echo '<p>Paste stuff:<br />';
+        echo "<code>{$deckless}</code></p>";
     } elseif ($event->active == 1) {
         echo '<td><input id="start_event" class="inputbutton" type="submit" name="mode" value="Recalculate Standings" />';
         echo '<input id="start_event" class="inputbutton" type="submit" name="mode" value="Reset Event" />';
@@ -1052,7 +1069,6 @@ function matchList($event)
     }
 
     if ($structure == 'League') {
-        //echo "<center> <b> Players added after the event has started will receive 0 points for any rounds already started and be paired when the next round begins</center></b>";
         echo '<table style="border-width: 0px" align="center">';
         echo '<tr><td>';
         echo '<tr><td colspan="2" align="center">';
@@ -1167,7 +1183,7 @@ function monthDropMenu($month)
 
 function structDropMenu($field, $def)
 {
-    $names = ['Swiss', 'Single Elimination', /*"Round Robin",*/ 'League'];
+    $names = ['Swiss', 'Single Elimination', /*"Round Robin",*/ 'League', 'League Match'];
     if (in_array($def, ['Swiss (Blossom)', 'Round Robin'])) { // Disabled structures.
         $names[] = $def;
     }
@@ -1178,6 +1194,19 @@ function structDropMenu($field, $def)
         echo "<option value=\"{$names[$i]}\" $selStr>{$names[$i]}</option>";
     }
     echo '</select>';
+}
+
+function clientDropMenu($field, $def)
+{
+    $names = [null, 'MTGO', 'Arena', 'Other'];
+    echo "<tr><th><label for='$field'>Game Client</label></th>";
+    echo "<td><select class=\"inputbox\" name=\"$field\" id=\"$field\">";
+    echo '<option value="">- Client -</option>';
+    for ($i = 1; $i < count($names); $i++) {
+        $selStr = ($def == $i) ? 'selected' : '';
+        echo "<option value=\"{$i}\" $selStr>{$names[$i]}</option>";
+    }
+    echo '</select></td></tr>';
 }
 
 function noEvent($event)
@@ -1230,7 +1259,8 @@ function insertEvent()
         $_POST['mainrounds'],
         $_POST['mainstruct'],
         $_POST['finalrounds'],
-        $_POST['finalstruct']
+        $_POST['finalstruct'],
+        $_POST['client']
     );
 
     return $event;
@@ -1317,6 +1347,7 @@ function updateEvent()
     $event->finalrounds = $_POST['finalrounds'];
     $event->finalstruct = $_POST['finalstruct'];
     $event->private = $_POST['private'];
+    $event->client = $_POST['client'];
 
     $event->save();
 

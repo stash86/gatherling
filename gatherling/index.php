@@ -4,7 +4,7 @@ $gatherlingoutofservice = 0;
 include 'lib.php';
 include 'config.php';
 $version = Database::single_result('SELECT version FROM db_version LIMIT 1');
-if ($version < 37) {
+if ($version < 42) {
     $gatherlingoutofservice = 1;
 }
 
@@ -29,9 +29,6 @@ if ($gatherlingoutofservice != 1) {
                 </ul>
             <p><b>Gatherling Statistics:</b></p>
                 <ul>
-
-                    <li> Current Session Timeout: <?php echo Event::session_timeout_stat() / 60 ?> minutes.</li>
-
                     <li> There are <?php echo Deck::uniqueCount() ?> unique decks. </li>
                     <li> We have recorded <?php echo Match::count() ?> matches from <?php echo Event::count() ?> events.</li>
                     <li> There are <?php echo Player::activeCount() ?> active players in gatherling. (<?php echo Player::verifiedCount() ?> verified) </li>
@@ -83,11 +80,6 @@ if ($gatherlingoutofservice != 1) {
                             <li> <a href="event.php">Host Control Panel</a></li>
                         <?php
     } ?>
-                        <?php if (!$player->verified && $CONFIG['infobot_passkey'] != '') {
-        ?>
-                            <li> <a href="player.php?mode=verifymtgo">Verify your account</a></li>
-                        <?php
-    } ?>
                     </ul>
                 </div>
             <?php } else { ?>
@@ -96,17 +88,17 @@ if ($gatherlingoutofservice != 1) {
                     <table class="form" align="left" cellpadding="3">
                         <form action="login.php" method="post">
                             <tr>
-                                <th>MTGO Username</th>
+                                <th>Username</th>
                                 <td><input class="inputbox" type="text" name="username" value="" /></td>
                             </tr>
                             <tr>
-                                <th>Gatherling Password</th>
+                                <th>Password</th>
                                 <td><input class="inputbox" type="password" name="password" value="" /></td>
                             </tr>
                             <tr>
                                 <td colspan="2" class="buttons">
                                 <input class="inputbutton" type="submit" name="mode" value="Log In" />
-                                <input class="inputbutton discordlogin fa-discord" type="submit" name="mode" value="Log In with discord" />
+                                <input class="inputbutton discordlogin fa-discord" type="submit" name="mode" value="Log In with Discord" />
                                 <br />
                                 <a href="register.php">Need to register?</a><br />
                                 <a href="forgot.php">Forgot your password?</a>

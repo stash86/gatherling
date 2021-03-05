@@ -64,6 +64,7 @@ function print_header($title, $js = null, $extra_head_content = '')
     echo "    <meta name=\"google-site-verification\" content=\"VWE-XX0CgPTHYgUqJ6t13N75y-p_Q9dgtqXikM3EsBo\" />\n";
     echo "    <title>{$CONFIG['site_name']} | {$title}</title>\n";
     echo '    <link rel="stylesheet" type="text/css" media="all" href="'.theme_file('css/stylesheet.css')."\" />\n";
+    echo "     <link href=\"//cdn.jsdelivr.net/npm/keyrune@latest/css/keyrune.css\" rel=\"stylesheet\" type=\"text/css\" />\n";
     echo "     <script src=\"//code.jquery.com/jquery-latest.min.js\"></script>\n";
     echo "     <script src=\"//cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js\"></script>\n";
     echo "     <script src=\"//cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.21/moment-timezone-with-data.min.js\"></script>\n";
@@ -74,6 +75,7 @@ function print_header($title, $js = null, $extra_head_content = '')
         echo '    </script>';
     }
     echo $extra_head_content;
+    include_once 'analyticstracking.php'; // google analytics tracking
     echo <<<'EOT'
   </head>
   <body>
@@ -81,7 +83,6 @@ function print_header($title, $js = null, $extra_head_content = '')
         <div id="header_bar" class="box">
             <div id="header_gatherling">
 EOT;
-    include_once 'analyticstracking.php'; // google analytics tracking
     //  echo image_tag("header_gatherling.png");
     echo <<<'EOT'
             </div>
@@ -164,9 +165,8 @@ function print_footer()
 {
     echo "<div class=\"prefix_1 suffix_1\">\n";
     echo "<div id=\"gatherling_footer\" class=\"box\">\n";
-    if (!print_git_hash()) {
-        version_tagline();
-    }
+    version_tagline();
+    print_git_hash();
     echo "</div><!-- prefix_1 suffix_1 -->\n";
     echo "</div><!-- gatherling_footer -->\n";
     echo "<div class=\"clear\"></div>\n";
@@ -429,7 +429,7 @@ function not_allowed($reason)
 
 function displayPlayerEmailPopUp($player, $email)
 {
-    echo "<a class=\"emailPop\" style=\color: green\" title=\"{$email}\">{$player}</a>";
+    echo "<a class=\"emailPop\" style=\"color: green\" title=\"{$email}\">{$player}</a>";
 }
 
 function tribeBanDropMenu($format)
@@ -521,7 +521,7 @@ function print_git_hash()
     if (file_exists('../.git/HEAD')) {
         $branch = trim(substr(file_get_contents('../.git/HEAD'), 5));
         if ($hash = file_get_contents(sprintf('../.git/%s', $branch))) {
-            echo 'Gatherling version '.$hash;
+            echo '<br/>'.$hash;
 
             return true;
         } else {
@@ -536,7 +536,8 @@ function print_git_hash()
 
 function version_tagline()
 {
-    echo 'Gatherling version 4.9.0 ("Where we’re going, we don’t need roads")';
+    echo 'Gatherling version 5.0.0 ("Hulk, no! Just for once in your life, don\'t smash!")';
+    // echo 'Gatherling version 4.9.0 ("Where we’re going, we don’t need roads")';
     // echo 'Gatherling version 4.8.8 ("Fish fingers and custard")';
     // echo 'Gatherling version 4.8.7 ("Step 7: Steal a bagel.")';
     // echo 'Gatherling version 4.8.6.1 ("I\'m gonna steal the declaration of independence.")';
@@ -602,7 +603,7 @@ function normaliseCardName($card, $tolower = false)
     $replace = ['e', 'e', 'e', 'e', 'E', 'E', 'E', 'E', 'a', 'a', 'a', 'a', 'a', 'A', 'A', 'A', 'A', 'A', 'o', 'o', 'o', 'o', 'O', 'O', 'O', 'O', 'i', 'i', 'i', 'I', 'I', 'I', 'I', 'I', 'u', 'u', 'u', 'u', 'U', 'U', 'U', 'U', 'y', 'y', 'Y', 'o', 'O', 'ae', 'ae', 'Ae', 'Ae', 'c', 'C', '-', '-', '-', "'", '{1/2}'];
     $card = preg_replace($pattern, $replace, $card);
     $card = preg_replace("/\306/", 'AE', $card);
-    $card = preg_replace("/ \/\/ /", '/', $card);
+    $card = preg_replace("/ \/\/\/? /", '/', $card);
     if ($tolower) {
         $card = strtolower($card);
     }
@@ -617,7 +618,7 @@ function parseCardsWithQuantity($cards)
     $cardarr = [];
     foreach ($cards as $line) {
         $chopped = rtrim($line);
-        if (preg_match("/[ \t]*([0-9]+)x?[ \t]+(.*)/i", $chopped, $m)) {
+        if (preg_match("/^[ \t]*([0-9]+)x?[ \t]+(.*?)( \(\w+\) \d+)?$/i", $chopped, $m)) {
             $qty = $m[1];
             $card = rtrim($m[2]);
             if (isset($cardarr[$card])) {
